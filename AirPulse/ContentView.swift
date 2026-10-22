@@ -2,69 +2,26 @@ import SwiftUI
 import WebKit
 
 struct ContentView: View {
-    @AppStorage("pc_gateway_url") private var serverUrl: String = "http://172.20.10.2:8899/mobile"
-    @State private var showSettings: Bool = false
-    @State private var inputUrl: String = ""
-
     var body: some View {
         ZStack {
             Color(red: 5/255, green: 7/255, blue: 10/255)
                 .ignoresSafeArea()
 
-            WebViewContainer(urlString: serverUrl)
+            OfflineWebView()
                 .ignoresSafeArea()
-
-            // Quick gear button in corner to change PC IP if network changes
-            VStack {
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        inputUrl = serverUrl
-                        showSettings = true
-                    }) {
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(.white.opacity(0.35))
-                            .padding(10)
-                            .background(Color.black.opacity(0.4))
-                            .clipShape(Circle())
-                    }
-                    .padding(.top, 48)
-                    .padding(.trailing, 16)
-                }
-                Spacer()
-            }
-        }
-        .sheet(isPresented: $showSettings) {
-            NavigationView {
-                Form {
-                    Section(header: Text("Địa Chỉ Máy Chủ AirPulse PC")) {
-                        TextField("http://192.168.x.x:8899/mobile", text: $inputUrl)
-                            .keyboardType(.URL)
-                            .autocapitalization(.none)
-                            .disableAutocorrection(true)
-                    }
-                    Section(footer: Text("Nhập địa chỉ IP hiển thị trên màn hình máy tính của bạn.")) {
-                        Button("Lưu & Kết Nối Lại") {
-                            serverUrl = inputUrl.trimmingCharacters(in: .whitespacesAndNewlines)
-                            showSettings = false
-                        }
-                    }
-                }
-                .navigationTitle("Cấu Hình Kết Nối")
-                .navigationBarItems(trailing: Button("Đóng") { showSettings = false })
-            }
         }
     }
 }
 
-struct WebViewContainer: UIViewRepresentable {
-    let urlString: String
-
+struct OfflineWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
+        
+        // Enable local file access and script execution
+        config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
+        config.defaultWebpagePreferences.allowsContentJavaScript = true
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.isOpaque = false
@@ -72,17 +29,45 @@ struct WebViewContainer: UIViewRepresentable {
         webView.scrollView.bounces = false
         webView.scrollView.contentInsetAdjustmentBehavior = .never
 
-        if let url = URL(string: urlString) {
-            var req = URLRequest(url: url)
-            req.timeoutInterval = 15
-            webView.load(req)
+        // 1. Try to find index.html in "www" subdirectory
+        if let wwwDir = Bundle.main.url(forResource: "www", withExtension: nil) {
+            let indexUrl = wwwDir.appendingPathComponent("index.html")
+            if FileManager.default.fileExists(atPath: indexUrl.path) {
+                webView.loadFileURL(indexUrl, allowingReadAccessTo: wwwDir)
+                return webView
+            }
         }
+        
+        // 2. Try to find index.html in bundle root
+        if let indexUrl = Bundle.main.url(forResource: "index", withExtension: "html") {
+            let accessDir = indexUrl.deletingLastPathComponent()
+            webView.loadFileURL(indexUrl, allowingReadAccessTo: accessDir)
+            return webView
+        }
+        
+        // 3. Fallback search via resourceURL
+        if let resourceUrl = Bundle.main.resourceURL {
+            let candidate1 = resourceUrl.appendingPathComponent("www").appendingPathComponent("index.html")
+            if FileManager.default.fileExists(atPath: candidate1.path) {
+                webView.loadFileURL(candidate1, allowingReadAccessTo: resourceUrl)
+                return webView
+            }
+            let candidate2 = resourceUrl.appendingPathComponent("index.html")
+            if FileManager.default.fileExists(atPath: candidate2.path) {
+                webView.loadFileURL(candidate2, allowingReadAccessTo: resourceUrl)
+                return webView
+            }
+        }
+
+        // 4. Fallback: Network URL if bundled files are somehow unavailable
+        if let fallbackUrl = URL(string: "http://172.20.10.2:8899/mobile") {
+            webView.load(URLRequest(url: fallbackUrl))
+        }
+
         return webView
     }
 
     func updateUIView(_ uiView: WKWebView, context: Context) {
-        if let currentUrl = uiView.url?.absoluteString, currentUrl != urlString, let newUrl = URL(string: urlString) {
-            uiView.load(URLRequest(url: newUrl))
-        }
+        // Self-contained app; state is maintained in WebView
     }
 }

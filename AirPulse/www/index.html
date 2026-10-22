@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>AirPulse Mobile - Kinetic Beam & Remote PC</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#05070a">
+  <link rel="stylesheet" href="mobile.css">
+</head>
+<body>
+  <div class="mobile-ambient"></div>
+
+  <div class="mobile-viewport">
+    <!-- Dynamic Island Top Capsule -->
+    <header class="dynamic-island" id="islandBar">
+      <span class="status-pulsar" id="statusPulsar"></span>
+      <span class="island-title" id="statusText">AirPulse • Đang dò PC...</span>
+      
+      <button class="ip-config-btn" id="btnConfigIp" title="Cấu hình IP máy tính PC">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span id="ipDisplayBadge">IP PC</span>
+      </button>
+
+      <a href="/api/download/ipa" class="ipa-badge-link" id="ipaDlLink" title="Cài app Native IPA cho iPhone">
+        🍎 IPA
+      </a>
+    </header>
+
+    <!-- Tab Panels Container -->
+    <main class="tab-views-container">
+      <!-- TAB 1: FLICK BEAM (GESTURE ARENA) -->
+      <section class="tab-pane active" id="tab-beam">
+        <div class="flick-beam-stage" id="flickStage">
+          <div class="beam-portal-ring"></div>
+
+          <!-- Empty State -->
+          <div class="empty-mobile-beam" id="emptyBeamState">
+            <div class="pulse-beam-core">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+            </div>
+            <div style="font-size: 0.95rem; font-weight: 700; color: #fff;">Chạm để chọn Ảnh / Video / Tệp</div>
+            <div style="font-size: 0.76rem; color: #64748b;">Truyền siêu tốc không nén chất lượng sang máy tính</div>
+          </div>
+
+          <!-- Staged 3D Card (Flick Up to send) -->
+          <div class="staged-mobile-card" id="stagedCard" style="display: none;">
+            <div class="thumb-preview-box" id="stagedThumb"></div>
+            <div>
+              <div id="stagedName" style="font-size: 0.88rem; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">photo.jpg</div>
+              <div id="stagedSize" style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--accent-cyan);">2.5 MB</div>
+            </div>
+
+            <div class="flick-prompt-arrow">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="18 15 12 9 6 15"></polyline>
+              </svg>
+              <span style="font-size: 0.78rem; font-weight: 700; color: var(--accent-cyan);">Vuốt Lướt Lên (Flick) Để Bắn Sang PC</span>
+            </div>
+
+            <button class="flick-tap-btn" id="flickBtn">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+              Bắn Sang PC Ngay
+            </button>
+          </div>
+
+          <input type="file" id="mobileFileInput" class="visually-hidden">
+        </div>
+      </section>
+
+      <!-- TAB 2: REMOTE PC HUB -->
+      <section class="tab-pane" id="tab-remote">
+        <div class="remote-scroll-pane">
+          <!-- Web Opener -->
+          <div class="card-mobile-panel">
+            <div class="card-mobile-title">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+              </svg>
+              Mở Trang Web Bất Kỳ Trên Máy Tính
+            </div>
+            <div class="url-box-mobile">
+              <input type="text" id="urlInput" class="url-input-mob" placeholder="Nhập link (vd: youtube.com) hoặc tìm kiếm...">
+              <button class="url-btn-mob" id="urlLaunchBtn">Mở</button>
+            </div>
+            <div class="quick-chips-row">
+              <span class="mob-chip" data-url="https://youtube.com">▶️ YouTube</span>
+              <span class="mob-chip" data-url="https://chatgpt.com">🤖 ChatGPT</span>
+              <span class="mob-chip" data-url="https://google.com">🔍 Google</span>
+              <span class="mob-chip" data-url="https://facebook.com">👥 Facebook</span>
+              <span class="mob-chip" data-url="https://tiktok.com">🎵 TikTok</span>
+              <span class="mob-chip" data-url="https://github.com">🐙 GitHub</span>
+            </div>
+          </div>
+
+          <!-- Remote Power Management Deck (PROMINENT & POLISHED) -->
+          <div class="card-mobile-panel power-deck-panel">
+            <div class="card-mobile-title" style="color: #ff3366;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                <line x1="12" y1="2" x2="12" y2="12"></line>
+              </svg>
+              Quản Lý Nguồn Máy Tính Từ Xa (Remote Power)
+            </div>
+            <div class="actions-grid-mob" style="grid-template-columns: repeat(2, 1fr);">
+              <button class="mob-action-btn power-shutdown-btn" id="btnTriggerShutdown">
+                <div class="mob-action-icon pink">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+                </div>
+                <span class="mob-action-label" style="color: #ff3366; font-weight: 700;">TẮT MÁY PC (15s)</span>
+              </button>
+
+              <button class="mob-action-btn power-cancel-btn" id="btnCancelShutdownQuick">
+                <div class="mob-action-icon emerald">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                </div>
+                <span class="mob-action-label" style="color: #10b981; font-weight: 700;">HỦY TẮT MÁY</span>
+              </button>
+
+              <button class="mob-action-btn" data-action="restart_pc">
+                <div class="mob-action-icon amber">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                </div>
+                <span class="mob-action-label">Khởi Động Lại</span>
+              </button>
+
+              <button class="mob-action-btn" data-action="sleep_pc">
+                <div class="mob-action-icon violet">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </div>
+                <span class="mob-action-label">Chế Độ Ngủ</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Hardware Remote Deck -->
+          <div class="card-mobile-panel">
+            <div class="card-mobile-title">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+              Lệnh Điều Khiển Máy Tính
+            </div>
+            <div class="actions-grid-mob">
+              <button class="mob-action-btn" data-action="lock_pc">
+                <div class="mob-action-icon pink">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
+                <span class="mob-action-label">Khóa Máy</span>
+              </button>
+
+              <button class="mob-action-btn" data-action="screenshot">
+                <div class="mob-action-icon cyan">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                </div>
+                <span class="mob-action-label">Chụp PC</span>
+              </button>
+
+              <button class="mob-action-btn" data-action="open_folder">
+                <div class="mob-action-icon violet">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <span class="mob-action-label">Thư Mục</span>
+              </button>
+
+              <button class="mob-action-btn" data-action="volume_mute">
+                <div class="mob-action-icon amber">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+                </div>
+                <span class="mob-action-label">Mute Loa</span>
+              </button>
+
+              <button class="mob-action-btn" data-action="volume_up">
+                <div class="mob-action-icon amber">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                </div>
+                <span class="mob-action-label">Tăng Âm</span>
+              </button>
+
+              <button class="mob-action-btn" data-action="volume_down">
+                <div class="mob-action-icon amber">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                </div>
+                <span class="mob-action-label">Giảm Âm</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: VIRTUAL TOUCHPAD -->
+      <section class="tab-pane" id="tab-touchpad">
+        <div class="touchpad-stage">
+          <div class="touchpad-surface" id="touchpadSurface">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="5" y="2" width="14" height="20" rx="7"></rect>
+              <line x1="12" y1="6" x2="12" y2="10"></line>
+            </svg>
+            <div>Rê ngón tay để di chuyển chuột PC</div>
+            <div style="font-size: 0.72rem; color: #475569; margin-top: 4px;">1 ngón = Click Trái • 2 ngón = Click Phải • Vuốt 2 ngón = Cuộn trang</div>
+          </div>
+          <div class="touchpad-buttons-row">
+            <button class="touchpad-btn" id="btnLeftClick">Chuột Trái</button>
+            <button class="touchpad-btn" id="btnRightClick">Chuột Phải</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: VAULT (FILES FROM PC) -->
+      <section class="tab-pane" id="tab-vault">
+        <div style="font-size: 0.88rem; font-weight: 700; color: #94a3b8; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+          <span>Tệp Nhận Từ Máy Tính</span>
+          <button id="btnRefreshVault" style="background: none; border: none; color: var(--accent-cyan); font-size: 0.78rem; font-weight: 700; cursor: pointer;">Làm mới</button>
+        </div>
+        <div class="vault-mobile-list" id="vaultList"></div>
+      </section>
+    </main>
+
+    <!-- Bottom Cyber Dock -->
+    <nav class="mobile-bottom-dock">
+      <button class="dock-item-btn active" data-tab="beam">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        <span>Bắn File</span>
+      </button>
+
+      <button class="dock-item-btn" data-tab="remote">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+        <span>Điều Khiển</span>
+      </button>
+
+      <button class="dock-item-btn" data-tab="touchpad">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <rect x="5" y="2" width="14" height="20" rx="7"></rect>
+          <line x1="12" y1="6" x2="12" y2="10"></line>
+        </svg>
+        <span>Bàn Chuột</span>
+      </button>
+
+      <button class="dock-item-btn" data-tab="vault">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span>Kho Tệp</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- MODAL 1: IP CONFIGURATION MODAL (For Native IPA & Web) -->
+  <div class="cyber-modal-overlay" id="ipModal" style="display: none;">
+    <div class="cyber-modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          Kết Nối Máy Tính (AirPulse PC)
+        </div>
+        <button class="modal-close-btn" id="btnCloseIpModal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 12px; line-height: 1.5;">
+          Nhập địa chỉ IP & Port hiển thị trên phần mềm AirPulse máy tính PC (cùng mạng Wi-Fi):
+        </p>
+        <div class="modal-input-wrap">
+          <input type="text" id="inputPcHost" class="modal-input" placeholder="172.20.10.2:8899" autocomplete="off" spellcheck="false">
+        </div>
+
+        <div style="font-size: 0.74rem; color: #64748b; margin-top: 10px; margin-bottom: 6px;">Gợi ý địa chỉ nhanh:</div>
+        <div class="modal-presets-row">
+          <button class="preset-chip" data-host="172.20.10.2:8899">172.20.10.2:8899</button>
+          <button class="preset-chip" data-host="192.168.1.15:8899">192.168.1.15:8899</button>
+          <button class="preset-chip" data-host="127.0.0.1:8899">127.0.0.1:8899</button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="modal-btn-cancel" id="btnCancelIpModal">Hủy</button>
+        <button class="modal-btn-submit" id="btnSaveIpModal">Lưu & Kết Nối</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: SHUTDOWN COUNTDOWN & ABORT OVERLAY -->
+  <div class="cyber-modal-overlay" id="shutdownModal" style="display: none;">
+    <div class="cyber-modal-card shutdown-card">
+      <div class="shutdown-hazard-ring">
+        <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#ff3366" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+      </div>
+
+      <div style="font-size: 1.15rem; font-weight: 800; color: #ffffff; margin-top: 10px;">
+        ĐÃ KÍCH HOẠT LỆNH TẮT PC!
+      </div>
+      <p style="font-size: 0.82rem; color: #94a3b8; margin: 8px 0 16px;">
+        Máy tính sẽ tự động tắt nguồn sau:
+      </p>
+
+      <div class="shutdown-countdown-num" id="countdownSeconds">15s</div>
+
+      <button class="abort-shutdown-btn" id="btnAbortShutdown">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="15" y1="9" x2="9" y2="15"></line>
+          <line x1="9" y1="9" x2="15" y2="15"></line>
+        </svg>
+        HỦY LỆNH TẮT MÁY NGAY (ABORT)
+      </button>
+
+      <div style="font-size: 0.72rem; color: #64748b; margin-top: 14px;">
+        Bấm nút trên để hủy bỏ ngay lập tức nếu bạn vô tình bấm nhầm.
+      </div>
+    </div>
+  </div>
+
+  <script src="mobile.js"></script>
+</body>
+</html>

@@ -12,9 +12,6 @@ targets:
       - path: AirPulse
         excludes:
           - "Info.plist"
-          - "www"
-      - path: AirPulse/www
-        type: folder
     info:
       path: AirPulse/Info.plist
       properties:

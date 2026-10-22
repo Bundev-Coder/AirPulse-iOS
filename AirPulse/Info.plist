@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleDisplayName</key>
+    <string>AirPulse</string>
+    <key>CFBundleExecutable</key>
+    <string>AirPulse</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.airpulse.beam.AirPulse</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>AirPulse</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>AirPulse kết nối mạng nội bộ Wi-Fi để truyền file siêu tốc và điều khiển chuột máy tính.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>AirPulse cần truy cập thư viện ảnh để gửi hình ảnh sang máy tính không nén chất lượng.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>AirPulse cần Camera để quét mã QR kết nối máy tính.</string>
+    <key>UIRequiresFullScreen</key>
+    <true/>
+    <key>UIStatusBarHidden</key>
+    <true/>
+</dict>
+</plist>

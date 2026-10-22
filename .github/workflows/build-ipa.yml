@@ -1,0 +1,86 @@
+name: Build AirPulse Native iOS IPA
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-ipa:
+    runs-on: macos-15
+    env:
+      CODE_SIGNING_ALLOWED: NO
+      CODE_SIGNING_REQUIRED: NO
+      CODE_SIGN_IDENTITY: ""
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Latest Xcode & Swift
+        run: |
+          LATEST_XCODE=$(ls -d /Applications/Xcode_2*.app /Applications/Xcode_16*.app /Applications/Xcode*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -n "$LATEST_XCODE" ]; then
+            echo "Selecting Xcode: $LATEST_XCODE"
+            sudo xcode-select -s "$LATEST_XCODE/Contents/Developer"
+          fi
+          xcodebuild -version
+          swift --version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode Project
+        run: xcodegen generate
+
+      - name: Build & Archive ARM64 Device App
+        run: |
+          xcodebuild \
+            -scheme AirPulse \
+            -project AirPulse.xcodeproj \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "${{ runner.temp }}/AirPulse.xcarchive" \
+            archive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Sign App Bundle (Ad-hoc)
+        run: |
+          APP_PATH=$(find "${{ runner.temp }}/AirPulse.xcarchive/Products/Applications" -name "*.app" -maxdepth 1 | head -n 1)
+          echo "Found app bundle at: $APP_PATH"
+          codesign -s - --force --deep "$APP_PATH"
+
+      - name: Package IPA
+        run: |
+          mkdir -p "${{ runner.temp }}/Payload"
+          APP_PATH=$(find "${{ runner.temp }}/AirPulse.xcarchive/Products/Applications" -name "*.app" -maxdepth 1 | head -n 1)
+          cp -R "$APP_PATH" "${{ runner.temp }}/Payload/"
+          cd "${{ runner.temp }}"
+          zip -r -9 AirPulse.ipa Payload
+          ls -lh AirPulse.ipa
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AirPulse.ipa
+          path: ${{ runner.temp }}/AirPulse.ipa
+          retention-days: 14
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: "AirPulse iOS v1.0 (Build ${{ github.run_number }})"
+          body: |
+            ### ⚡ AirPulse - Kinetic Quantum Beam Native iOS IPA
+            - 📲 **Native WKWebView & Flick Gestures**: Cử chỉ lướt vuốt truyền file siêu tốc 2 chiều giữa iPhone và PC.
+            - 🖱️ **Bàn di chuột cảm ứng Trackpad không dây**: Rê chuột, click trái, click phải, cuộn trang siêu mượt.
+            - 🎮 **Bảng điều khiển máy tính**: Mở web bất kỳ, phím tắt phần cứng, chụp màn hình PC.
+            - 📦 **Cài đặt tiện lợi**: Nạp trực tiếp qua TrollStore, AltStore, Sideloadly, ESign, Scarlet.
+          files: ${{ runner.temp }}/AirPulse.ipa
+          draft: false

@@ -74,22 +74,41 @@ public final class TlsClient {
         return try await withCheckedThrowingContinuation { continuation in
             var resumed = false
 
+            // Timeout 5 giây để tránh bị treo ở trạng thái Đang kết nối
+            let timeoutTask = Task {
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                if !resumed {
+                    resumed = true
+                    conn.cancel()
+                    continuation.resume(throwing: TlsClientError.connectionFailed("Hết thời gian chờ kết nối máy tính (5s). Vui lòng kiểm tra địa chỉ IP và đảm bảo máy tính cùng mạng WiFi."))
+                }
+            }
+
             conn.stateUpdateHandler = { [weak self] state in
                 switch state {
                 case .ready:
                     self?.isConnected = true
                     if !resumed {
                         resumed = true
+                        timeoutTask.cancel()
                         continuation.resume()
                     }
                 case .failed(let err):
                     self?.isConnected = false
                     if !resumed {
                         resumed = true
+                        timeoutTask.cancel()
                         continuation.resume(throwing: TlsClientError.connectionFailed(err.localizedDescription))
                     }
                 case .cancelled:
                     self?.isConnected = false
+                    if !resumed {
+                        resumed = true
+                        timeoutTask.cancel()
+                        continuation.resume(throwing: TlsClientError.connectionFailed("Kết nối đã bị hủy"))
+                    }
+                case .waiting(let err):
+                    print("[AirPulse TLS] Đang chờ đường truyền mạng: \(err)")
                 default:
                     break
                 }

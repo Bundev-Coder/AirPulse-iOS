@@ -68,26 +68,43 @@ public final class AirPulseSession: ObservableObject, H264DecoderDelegate {
             // 2. Send HELLO
             let (clientId, deviceSecret) = KeychainManager.shared.getOrCreateClientIdentity()
             let deviceName = UIDevice.current.name
-            let hello = HelloMessage(clientId: clientId, deviceName: deviceName)
+            var hello = HelloMessage(clientId: clientId, deviceName: deviceName)
+            if pin != nil || pairingToken != nil {
+                hello.caps.append("pair")
+            }
             try await controlClient.sendFrame(type: MessageType.hello, payload: hello.encode())
 
             // 3. Receive HELLO_ACK
             guard let ackFrame = try await controlClient.readFrame(),
                   ackFrame.header.messageType == MessageType.helloAck,
                   let ack = HelloAckMessage(from: ackFrame.payload) else {
-                throw TlsClientError.protocolViolation("Không nhận được HELLO_ACK")
+                throw TlsClientError.protocolViolation("Không nhận được HELLO_ACK từ máy tính")
             }
 
             self.sessionId = ack.sessionId
             self.videoPort = UInt16(ack.videoPort)
             self.filePort = UInt16(ack.filePort)
 
-            // 4. Pairing / Authentication
+            // 4. Nhận AUTH_CHALLENGE từ máy tính (máy tính luôn gửi nonce)
+            guard let challengeFrame = try await controlClient.readFrame() else {
+                throw TlsClientError.protocolViolation("Mất kết nối sau HELLO_ACK")
+            }
+
+            if challengeFrame.header.messageType == MessageType.error {
+                let err = ErrorMessage(from: challengeFrame.payload)
+                throw TlsClientError.protocolViolation(err?.message ?? "Lỗi xác thực từ máy tính")
+            }
+
+            guard challengeFrame.header.messageType == MessageType.authChallenge,
+                  let challenge = AuthChallenge(from: challengeFrame.payload) else {
+                throw TlsClientError.protocolViolation("Không nhận được AUTH_CHALLENGE từ máy tính")
+            }
+
             let isAlreadyTrusted = KeychainManager.shared.getPairedHosts().contains { $0.id == ack.hostName || $0.lastKnownIp == hostIp }
             let shouldPair = (pairingToken != nil || pin != nil) || !isAlreadyTrusted
 
             if shouldPair {
-                // New Pairing
+                // Gửi PAIRING_REQUEST
                 let token = pairingToken ?? PairingManager.shared.createPinToken(pin: pin ?? "")
                 let method = pairingToken != nil ? "qr" : "pin"
                 let req = PairingRequest(
@@ -99,17 +116,25 @@ public final class AirPulseSession: ObservableObject, H264DecoderDelegate {
                 )
                 try await controlClient.sendFrame(type: MessageType.pairingRequest, payload: req.encode())
 
-                guard let respFrame = try await controlClient.readFrame(),
-                      respFrame.header.messageType == MessageType.pairingResponse,
+                guard let respFrame = try await controlClient.readFrame() else {
+                    throw TlsClientError.protocolViolation("Không nhận được phản hồi ghép đôi từ máy tính")
+                }
+
+                if respFrame.header.messageType == MessageType.error {
+                    let err = ErrorMessage(from: respFrame.payload)
+                    throw TlsClientError.protocolViolation(err?.message ?? "Ghép đôi thất bại")
+                }
+
+                guard respFrame.header.messageType == MessageType.pairingResponse,
                       let resp = PairingResponse(from: respFrame.payload) else {
-                    throw TlsClientError.protocolViolation("Không nhận được PAIRING_RESPONSE")
+                    throw TlsClientError.protocolViolation("Không nhận được PAIRING_RESPONSE hợp lệ")
                 }
 
                 guard resp.accepted else {
                     throw TlsClientError.protocolViolation("Ghép đôi bị từ chối: \(resp.rejectReason)")
                 }
 
-                // Save to trusted Keychain
+                // Lưu vào Keychain thiết bị tin cậy
                 let pairedHost = PairedHost(
                     id: ack.hostName,
                     name: ack.hostName,
@@ -120,13 +145,7 @@ public final class AirPulseSession: ObservableObject, H264DecoderDelegate {
                 )
                 KeychainManager.shared.savePairedHost(pairedHost)
             } else {
-                // Existing trusted host — AUTH_CHALLENGE
-                guard let challengeFrame = try await controlClient.readFrame(),
-                      challengeFrame.header.messageType == MessageType.authChallenge,
-                      let challenge = AuthChallenge(from: challengeFrame.payload) else {
-                    throw TlsClientError.protocolViolation("Không nhận được AUTH_CHALLENGE")
-                }
-
+                // Thiết bị đã từng ghép đôi — Gửi AUTH_RESPONSE
                 let signed = PairingManager.shared.computeAuthResponse(
                     nonce: challenge.nonce,
                     timestampMs: challenge.timestampMs,
@@ -140,38 +159,53 @@ public final class AirPulseSession: ObservableObject, H264DecoderDelegate {
             let startMsg = SessionStartMessage(displayIndex: 0)
             try await controlClient.sendFrame(type: MessageType.sessionStart, payload: startMsg.encode())
 
-            // 6. Receive DISPLAY_LIST
-            if let dispFrame = try await controlClient.readFrame(),
-               dispFrame.header.messageType == MessageType.displayList,
-               let dispList = DisplayListMessage(from: dispFrame.payload) {
+            // 6. Receive DISPLAY_LIST hoặc Error phản hồi
+            guard let nextFrame = try await controlClient.readFrame() else {
+                throw TlsClientError.protocolViolation("Mất kết nối trước khi nhận cấu hình hiển thị")
+            }
+
+            if nextFrame.header.messageType == MessageType.error {
+                let err = ErrorMessage(from: nextFrame.payload)
+                KeychainManager.shared.removePairedHost(id: ack.hostName)
+                throw TlsClientError.protocolViolation(err?.message ?? "Phiên đã hết hạn, vui lòng chọn Ghép Đôi và nhập mã PIN")
+            }
+
+            if nextFrame.header.messageType == MessageType.displayList,
+               let dispList = DisplayListMessage(from: nextFrame.payload) {
                 await MainActor.run {
                     self.displays = dispList.displays
                 }
             }
 
-            // 7. Connect Secondary Channels (Video & File)
-            try await videoClient.connect(host: hostIp, port: self.videoPort, expectedFingerprint: expectedFingerprint)
-            try await fileClient.connect(host: hostIp, port: self.filePort, expectedFingerprint: expectedFingerprint)
-
-            // Send 36-byte ASCII sessionId immediately on secondary channels
+            // 7. Kết nối kênh truyền File và kênh Video
             var sessionBytes = sessionId.data(using: .ascii) ?? Data()
-            while sessionBytes.count < 36 { sessionBytes.append(0x20) } // pad if needed
-            sessionBytes = sessionBytes.prefix(36)
+            while sessionBytes.count < 36 { sessionBytes.append(0x20) }
+            let paddedSession = sessionBytes.prefix(36)
 
-            try await videoClient.sendRaw(data: sessionBytes)
-            try await fileClient.sendRaw(data: sessionBytes)
+            // Kênh File (Ưu tiên số 1: truyền file/ảnh/video tức thì)
+            try await fileClient.connect(host: hostIp, port: self.filePort, expectedFingerprint: expectedFingerprint)
+            try await fileClient.sendRaw(data: paddedSession)
 
-            // Attach FileTransferManager
             self.fileTransferManager = FileTransferManager(client: self.fileClient)
             self.fileTransferManager?.start()
+
+            // Kênh Video (Chạy nền không chặn giao diện truyền file và phím tắt)
+            Task {
+                do {
+                    try await self.videoClient.connect(host: hostIp, port: self.videoPort, expectedFingerprint: expectedFingerprint)
+                    try await self.videoClient.sendRaw(data: paddedSession)
+                    await self.runVideoLoop()
+                } catch {
+                    print("[AirPulse] Video stream offline or skipped: \(error.localizedDescription)")
+                }
+            }
 
             self.isRunning = true
             await MainActor.run { self.state = .streaming }
 
-            // 8. Start Background loops
-            let t1 = Task { await self.runVideoLoop() }
+            // 8. Bắt đầu vòng lặp nhận lệnh điều khiển
             let t2 = Task { await self.runControlLoop() }
-            tasks.append(contentsOf: [t1, t2])
+            tasks.append(t2)
 
         } catch {
             await MainActor.run {

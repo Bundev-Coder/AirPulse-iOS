@@ -23,6 +23,15 @@ public struct HostListView: View {
                         // Header Banner
                         headerBanner
 
+                        // Trạng thái kết nối / Thông báo lỗi
+                        if case .connecting = session.state {
+                            statusBanner(text: "Đang kết nối đến máy tính...", isError: false)
+                        } else if case .authenticating = session.state {
+                            statusBanner(text: "Đang xác thực bảo mật...", isError: false)
+                        } else if case .failed(let err) = session.state {
+                            statusBanner(text: err, isError: true)
+                        }
+
                         // Section 1: Paired Hosts
                         if !pairedHosts.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
@@ -327,6 +336,44 @@ public struct HostListView: View {
 
     private func reloadPairedHosts() {
         pairedHosts = KeychainManager.shared.getPairedHosts()
+    }
+
+    private func statusBanner(text: String, isError: Bool) -> some View {
+        HStack(spacing: 10) {
+            if isError {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.red)
+            } else {
+                ProgressView().tint(.cyan)
+            }
+            Text(text)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(isError ? .red : .cyan)
+                .lineLimit(2)
+            Spacer()
+            if isError {
+                Button(action: {
+                    pairingInitialIp = ""
+                    isShowingPairingView = true
+                }) {
+                    Text("Ghép đôi lại")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.red.opacity(0.8))
+                        .cornerRadius(6)
+                }
+            }
+        }
+        .padding(12)
+        .background(isError ? Color.red.opacity(0.12) : Color.cyan.opacity(0.1))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isError ? Color.red.opacity(0.3) : Color.cyan.opacity(0.2), lineWidth: 1)
+        )
+        .padding(.horizontal)
     }
 }
 

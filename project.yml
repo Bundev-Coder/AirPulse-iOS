@@ -2,12 +2,12 @@ name: AirPulse
 options:
   bundleIdPrefix: com.airpulse.beam
   deploymentTarget:
-    iOS: "15.0"
+    iOS: "16.0"
 targets:
   AirPulse:
     type: application
     platform: iOS
-    deploymentTarget: "15.0"
+    deploymentTarget: "16.0"
     sources:
       - path: AirPulse
         excludes:
@@ -27,7 +27,7 @@ targets:
         CODE_SIGNING_REQUIRED: "NO"
         CODE_SIGN_IDENTITY: ""
         ENABLE_BITCODE: "NO"
-        SWIFT_VERSION: "5.0"
+        SWIFT_VERSION: "5.9"
         GENERATE_INFOPLIST_FILE: "NO"
         INFOPLIST_FILE: AirPulse/Info.plist
         TARGETED_DEVICE_FAMILY: "1,2"

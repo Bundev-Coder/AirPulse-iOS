@@ -33,6 +33,12 @@
     <string>AirPulse cần truy cập thư viện ảnh để gửi hình ảnh sang máy tính không nén chất lượng.</string>
     <key>NSCameraUsageDescription</key>
     <string>AirPulse cần Camera để quét mã QR kết nối máy tính.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>AirPulse cần lưu ảnh và video nhận từ máy tính vào Album ảnh.</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_airpulse._tcp</string>
+    </array>
     <key>UIRequiresFullScreen</key>
     <true/>
     <key>UIStatusBarHidden</key>

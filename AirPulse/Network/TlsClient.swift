@@ -35,35 +35,30 @@ public final class TlsClient {
         let nwPort = NWEndpoint.Port(rawValue: port) ?? 7001
 
         let tlsOptions = NWProtocolTLS.Options()
-        sec_protocol_options_set_min_tls_protocol_version(tlsOptions.securityProtocolOptions, .TLSv13)
+        sec_protocol_options_set_min_tls_protocol_version(tlsOptions.securityProtocolOptions, .TLSv12)
         sec_protocol_options_set_max_tls_protocol_version(tlsOptions.securityProtocolOptions, .TLSv13)
 
-        // Custom TLS Verification for self-signed host certificate pinning
+        // Custom TLS Verification for self-signed host certificate pinning (safe check)
         sec_protocol_options_set_verify_block(tlsOptions.securityProtocolOptions, { [weak self] (_, secTrust, completionHandler) in
-            guard let serverTrust = sec_trust_copy_ref(secTrust).takeRetainedValue() as SecTrust? else {
-                completionHandler(false)
-                return
-            }
+            if let unmanaged = sec_trust_copy_ref(secTrust) {
+                let serverTrust = unmanaged.takeRetainedValue()
+                if let certChain = SecTrustCopyCertificateChain(serverTrust) as? [SecCertificate],
+                   let leafCert = certChain.first {
+                    let certData = SecCertificateCopyData(leafCert) as Data
+                    let hash = SHA256.hash(data: certData)
+                    let certHex = hash.map { String(format: "%02x", $0) }.joined()
 
-            guard let certChain = SecTrustCopyCertificateChain(serverTrust) as? [SecCertificate],
-                  let leafCert = certChain.first else {
-                completionHandler(false)
-                return
-            }
-
-            let certData = SecCertificateCopyData(leafCert) as Data
-            let hash = SHA256.hash(data: certData)
-            let certHex = hash.map { String(format: "%02x", $0) }.joined()
-
-            if let pinned = self?.pinnedFingerprint, !pinned.isEmpty {
-                let cleanPinned = pinned.lowercased().replacingOccurrences(of: ":", with: "")
-                if certHex.lowercased().hasPrefix(cleanPinned) || cleanPinned.hasPrefix(certHex.lowercased()) {
-                    completionHandler(true)
-                    return
+                    if let pinned = self?.pinnedFingerprint, !pinned.isEmpty {
+                        let cleanPinned = pinned.lowercased().replacingOccurrences(of: ":", with: "")
+                        if !certHex.lowercased().hasPrefix(cleanPinned) && !cleanPinned.hasPrefix(certHex.lowercased()) {
+                            completionHandler(false)
+                            return
+                        }
+                    }
                 }
             }
 
-            // Trust local host cert if no pin specified yet (during initial pairing)
+            // Trust local host self-signed cert on LAN
             completionHandler(true)
         }, queue)
 

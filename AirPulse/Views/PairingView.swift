@@ -5,11 +5,13 @@ public struct PairingView: View {
     @ObservedObject public var session: AirPulseSession
     @Environment(\.dismiss) private var dismiss
 
-    @State private var selectedTab: Int = 0 // 0 = QR, 1 = PIN
+    @State private var selectedTab: Int = 1 // 1 = PIN (Default, most reliable), 0 = QR
     @State private var targetHostIp: String = ""
     @State private var pinCode: String = ""
     @State private var isConnecting: Bool = false
     @State private var errorMessage: String?
+    @State private var cameraUnavailable: Bool = false
+    @FocusState private var isPinFieldFocused: Bool
 
     public init(session: AirPulseSession, initialIp: String = "") {
         self.session = session
@@ -24,8 +26,8 @@ public struct PairingView: View {
                 VStack(spacing: 20) {
                     // Custom Segmented Picker
                     HStack(spacing: 0) {
-                        tabButton("Quét mã QR", index: 0, icon: "qrcode.viewfinder")
                         tabButton("Nhập mã PIN", index: 1, icon: "number.circle.fill")
+                        tabButton("Quét mã QR", index: 0, icon: "qrcode.viewfinder")
                     }
                     .background(Color.white.opacity(0.08))
                     .cornerRadius(12)
@@ -40,22 +42,53 @@ public struct PairingView: View {
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 32)
 
-                            ZStack {
-                                QRCodeScannerRepresentable { qrCode in
-                                    handleScannedQr(qrCode)
+                            if cameraUnavailable {
+                                VStack(spacing: 12) {
+                                    Image(systemName: "camera.slash.fill")
+                                        .font(.system(size: 44))
+                                        .foregroundColor(.orange)
+                                    Text("Camera chưa được cấp quyền hoặc không khả dụng")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.white)
+                                        .multilineTextAlignment(.center)
+                                    Text("Vui lòng cấp quyền Camera trong Cài đặt iPhone hoặc chuyển sang tab 'Nhập mã PIN' bên trên để ghép đôi ngay.")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.gray)
+                                        .multilineTextAlignment(.center)
+                                        .padding(.horizontal, 20)
+                                    Button("Chuyển sang Nhập mã PIN") {
+                                        selectedTab = 1
+                                    }
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(.cyan)
+                                    .padding(.top, 4)
                                 }
                                 .frame(width: 280, height: 280)
+                                .background(Color.white.opacity(0.05))
                                 .cornerRadius(20)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 20)
-                                        .stroke(LinearGradient(colors: [.cyan, .blue], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 3)
-                                )
+                            } else {
+                                ZStack {
+                                    QRCodeScannerRepresentable(
+                                        onCodeScanned: { qrCode in
+                                            handleScannedQr(qrCode)
+                                        },
+                                        onPermissionDenied: {
+                                            cameraUnavailable = true
+                                        }
+                                    )
+                                    .frame(width: 280, height: 280)
+                                    .cornerRadius(20)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .stroke(LinearGradient(colors: [.cyan, .blue], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 3)
+                                    )
 
-                                // Scanning laser line animation
-                                ScannerLineAnimation()
+                                    // Scanning laser line animation
+                                    ScannerLineAnimation()
+                                }
+                                .frame(width: 280, height: 280)
+                                .shadow(color: .cyan.opacity(0.3), radius: 15)
                             }
-                            .frame(width: 280, height: 280)
-                            .shadow(color: .cyan.opacity(0.3), radius: 15)
 
                             if let err = errorMessage {
                                 Text(err)
@@ -81,6 +114,8 @@ public struct PairingView: View {
                                     .foregroundColor(.gray)
                                 TextField("Ví dụ: 192.168.1.15", text: $targetHostIp)
                                     .keyboardType(.numbersAndPunctuation)
+                                    .autocapitalization(.none)
+                                    .disableAutocorrection(true)
                                     .padding(12)
                                     .background(Color.white.opacity(0.07))
                                     .cornerRadius(10)
@@ -95,12 +130,24 @@ public struct PairingView: View {
                                 }
                             }
                             .padding(.vertical, 8)
+                            .onTapGesture {
+                                isPinFieldFocused = true
+                            }
 
-                            // Hidden or Custom Keypad
+                            // Hidden TextField for numeric keyboard
                             TextField("", text: $pinCode)
                                 .keyboardType(.numberPad)
+                                .focused($isPinFieldFocused)
                                 .frame(width: 1, height: 1)
                                 .opacity(0.01)
+                                .onChange(of: pinCode) { val in
+                                    let filtered = val.filter { $0.isNumber }
+                                    if filtered.count > 6 {
+                                        pinCode = String(filtered.prefix(6))
+                                    } else if filtered != val {
+                                        pinCode = filtered
+                                    }
+                                }
 
                             if let err = errorMessage {
                                 Text(err)
@@ -142,6 +189,13 @@ public struct PairingView: View {
                         .foregroundColor(.cyan)
                 }
             }
+            .onAppear {
+                if selectedTab == 1 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        isPinFieldFocused = true
+                    }
+                }
+            }
         }
     }
 
@@ -166,7 +220,13 @@ public struct PairingView: View {
     }
 
     private func digitBox(_ index: Int) -> some View {
-        let char = index < pinCode.count ? String(Array(pinCode)[index]) : ""
+        let char: String
+        if index < pinCode.count {
+            let start = pinCode.index(pinCode.startIndex, offsetBy: index)
+            char = String(pinCode[start])
+        } else {
+            char = ""
+        }
         let isFocused = pinCode.count == index
 
         return Text(char)
@@ -243,10 +303,12 @@ private struct ScannerLineAnimation: View {
 
 public struct QRCodeScannerRepresentable: UIViewControllerRepresentable {
     public let onCodeScanned: (String) -> Void
+    public let onPermissionDenied: (() -> Void)?
 
     public func makeUIViewController(context: Context) -> QRScannerViewController {
         let vc = QRScannerViewController()
         vc.onCodeScanned = onCodeScanned
+        vc.onPermissionDenied = onPermissionDenied
         return vc
     }
 
@@ -255,40 +317,79 @@ public struct QRCodeScannerRepresentable: UIViewControllerRepresentable {
 
 public final class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
     public var onCodeScanned: ((String) -> Void)?
+    public var onPermissionDenied: (() -> Void)?
+
     private var captureSession: AVCaptureSession?
+    private var previewLayer: AVCaptureVideoPreviewLayer?
     private var hasScanned = false
 
     public override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
-        setupCamera()
+        checkPermissionAndSetupCamera()
+    }
+
+    private func checkPermissionAndSetupCamera() {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            setupCamera()
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        self?.setupCamera()
+                    } else {
+                        self?.onPermissionDenied?()
+                    }
+                }
+            }
+        case .denied, .restricted:
+            DispatchQueue.main.async { [weak self] in
+                self?.onPermissionDenied?()
+            }
+        @unknown default:
+            break
+        }
     }
 
     private func setupCamera() {
+        guard let device = AVCaptureDevice.default(for: .video) else {
+            onPermissionDenied?()
+            return
+        }
+
         let session = AVCaptureSession()
         self.captureSession = session
 
-        guard let device = AVCaptureDevice.default(for: .video),
-              let input = try? AVCaptureDeviceInput(device: device),
+        guard let input = try? AVCaptureDeviceInput(device: device),
               session.canAddInput(input) else {
+            onPermissionDenied?()
             return
         }
         session.addInput(input)
 
         let output = AVCaptureMetadataOutput()
-        guard session.canAddOutput(output) else { return }
+        guard session.canAddOutput(output) else {
+            onPermissionDenied?()
+            return
+        }
         session.addOutput(output)
 
         output.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
-        output.metadataObjectTypes = [.qr]
 
-        let previewLayer = AVCaptureVideoPreviewLayer(session: session)
-        previewLayer.frame = view.layer.bounds
-        previewLayer.videoGravity = .resizeAspectFill
-        view.layer.addSublayer(previewLayer)
+        // Safe assignment of metadata types only if supported
+        if output.availableMetadataObjectTypes.contains(.qr) {
+            output.metadataObjectTypes = [.qr]
+        }
 
-        DispatchQueue.global(qos: .userInitiated).async {
-            session.startRunning()
+        let preview = AVCaptureVideoPreviewLayer(session: session)
+        preview.frame = view.bounds
+        preview.videoGravity = .resizeAspectFill
+        view.layer.addSublayer(preview)
+        self.previewLayer = preview
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak session] in
+            session?.startRunning()
         }
     }
 
@@ -304,8 +405,11 @@ public final class QRScannerViewController: UIViewController, AVCaptureMetadataO
 
     public override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        if let sub = view.layer.sublayers?.first as? AVCaptureVideoPreviewLayer {
-            sub.frame = view.bounds
-        }
+        previewLayer?.frame = view.bounds
+    }
+
+    public override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        captureSession?.stopRunning()
     }
 }

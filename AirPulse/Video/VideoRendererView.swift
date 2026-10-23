@@ -2,13 +2,7 @@ import SwiftUI
 import AVFoundation
 
 public final class VideoSampleLayerUIView: UIView {
-    public override class var layerClass: AnyClass {
-        return AVSampleBufferDisplayLayer.self
-    }
-
-    public var sampleLayer: AVSampleBufferDisplayLayer {
-        return layer as! AVSampleBufferDisplayLayer
-    }
+    public let displayLayer = AVSampleBufferDisplayLayer()
 
     public override init(frame: CGRect) {
         super.init(frame: frame)
@@ -22,22 +16,28 @@ public final class VideoSampleLayerUIView: UIView {
 
     private func setupLayer() {
         backgroundColor = .black
-        sampleLayer.videoGravity = .resizeAspect
-        sampleLayer.preventsDisplaySleepDuringVideoPlayback = true
+        displayLayer.videoGravity = .resizeAspect
+        displayLayer.preventsDisplaySleepDuringVideoPlayback = true
+        layer.addSublayer(displayLayer)
+    }
+
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        displayLayer.frame = bounds
     }
 
     public func enqueue(_ sampleBuffer: CMSampleBuffer) {
-        if sampleLayer.status == .failed {
-            sampleLayer.flush()
+        if displayLayer.status == .failed {
+            displayLayer.flush()
         }
 
-        if sampleLayer.isReadyForMoreMediaData {
-            sampleLayer.enqueue(sampleBuffer)
+        if displayLayer.isReadyForMoreMediaData {
+            displayLayer.enqueue(sampleBuffer)
         }
     }
 
     public func flush() {
-        sampleLayer.flush()
+        displayLayer.flush()
     }
 }
 
@@ -55,6 +55,6 @@ public struct VideoRendererView: UIViewRepresentable {
     }
 
     public func updateUIView(_ uiView: VideoSampleLayerUIView, context: Context) {
-        // Dynamic adjustments if needed
+        uiView.displayLayer.frame = uiView.bounds
     }
 }

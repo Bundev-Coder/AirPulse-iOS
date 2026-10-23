@@ -673,3 +673,43 @@ public struct SystemCommandMessage {
         return w.data
     }
 }
+
+// MARK: - Error Message
+
+public struct ErrorMessage {
+    public var code: UInt32 = 0
+    public var message: String = ""
+    public var fatal: Bool = false
+
+    public init(code: UInt32 = 0, message: String = "", fatal: Bool = false) {
+        self.code = code
+        self.message = message
+        self.fatal = fatal
+    }
+
+    public init?(from data: Data) {
+        let r = ProtoReader(data: data)
+        var c: UInt32 = 0
+        var m: String = ""
+        var f: Bool = false
+        while let (field, wire) = r.nextField() {
+            switch field {
+            case 1: c = UInt32(r.readInt32() ?? 0)
+            case 2: m = r.readString() ?? ""
+            case 3: f = r.readBool() ?? false
+            default: r.skip(wireType: wire)
+            }
+        }
+        self.code = c
+        self.message = m
+        self.fatal = f
+    }
+
+    public func encode() -> Data {
+        let w = ProtoWriter()
+        w.writeInt32(field: 1, value: Int32(code))
+        w.writeString(field: 2, value: message)
+        w.writeBool(field: 3, value: fatal)
+        return w.data
+    }
+}

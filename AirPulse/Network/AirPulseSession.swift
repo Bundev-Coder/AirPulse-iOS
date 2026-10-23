@@ -94,7 +94,7 @@ public final class AirPulseSession: ObservableObject, H264DecoderDelegate {
                     method: method,
                     token: token,
                     deviceName: deviceName,
-                    devicePublicKey: Data(),
+                    devicePublicKey: deviceSecret.withUnsafeBytes { Data($0) },
                     deviceId: clientId
                 )
                 try await controlClient.sendFrame(type: MessageType.pairingRequest, payload: req.encode())

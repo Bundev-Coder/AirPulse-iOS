@@ -639,3 +639,37 @@ public struct FileCompleteAck {
         return w.data
     }
 }
+
+// MARK: - System Command Message (Volume, Media, Open URL, Power)
+
+public struct SystemCommandMessage {
+    public var command: String
+    public var param: String
+
+    public init(command: String, param: String = "") {
+        self.command = command
+        self.param = param
+    }
+
+    public init?(from data: Data) {
+        let r = ProtoReader(data: data)
+        var cmd = ""
+        var p = ""
+        while let (field, wire) = r.nextField() {
+            switch field {
+            case 1: cmd = r.readString() ?? ""
+            case 2: p = r.readString() ?? ""
+            default: r.skip(wireType: wire)
+            }
+        }
+        self.command = cmd
+        self.param = p
+    }
+
+    public func encode() -> Data {
+        let w = ProtoWriter()
+        w.writeString(field: 1, value: command)
+        w.writeString(field: 2, value: param)
+        return w.data
+    }
+}

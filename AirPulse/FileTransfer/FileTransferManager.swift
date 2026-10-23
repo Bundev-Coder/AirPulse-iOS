@@ -249,6 +249,16 @@ public final class FileTransferManager: ObservableObject {
 
     // MARK: - Outgoing File Handling (iOS -> PC)
 
+    public func sendFile(url: URL) {
+        Task {
+            do {
+                try await self.sendFile(from: url)
+            } catch {
+                print("Lỗi gửi file: \(error)")
+            }
+        }
+    }
+
     public func sendFile(from localUrl: URL) async throws {
         let isAccessGranted = localUrl.startAccessingSecurityScopedResource()
         defer { if isAccessGranted { localUrl.stopAccessingSecurityScopedResource() } }

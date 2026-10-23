@@ -99,7 +99,7 @@ public struct HostListView: View {
                 },
                 set: { if !$0 { session.disconnect() } }
             )) {
-                RemoteDesktopView(session: session)
+                SessionHubView(session: session)
             }
             .onAppear {
                 reloadPairedHosts()

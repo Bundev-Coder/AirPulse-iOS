@@ -148,6 +148,7 @@ public enum MessageType {
     public static let pong: UInt8            = 0x51
     public static let disconnect: UInt8      = 0x52
     public static let error: UInt8           = 0x53
+    public static let systemCommand: UInt8   = 0x54
 
     // File Transfer
     public static let fileSendRequest: UInt8 = 0x60

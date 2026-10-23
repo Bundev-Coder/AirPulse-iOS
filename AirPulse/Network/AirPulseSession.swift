@@ -32,7 +32,7 @@ public final class AirPulseSession: ObservableObject, H264DecoderDelegate {
     public var fileTransferManager: FileTransferManager?
 
     private var sessionId: String = ""
-    private var hostIp: String = ""
+    public private(set) var hostIp: String = ""
     private var controlPort: UInt16 = 7001
     private var videoPort: UInt16 = 7002
     private var filePort: UInt16 = 7003
@@ -84,8 +84,9 @@ public final class AirPulseSession: ObservableObject, H264DecoderDelegate {
 
             // 4. Pairing / Authentication
             let isAlreadyTrusted = KeychainManager.shared.getPairedHosts().contains { $0.id == ack.hostName || $0.lastKnownIp == hostIp }
+            let shouldPair = (pairingToken != nil || pin != nil) || !isAlreadyTrusted
 
-            if !isAlreadyTrusted && (pairingToken != nil || pin != nil) {
+            if shouldPair {
                 // New Pairing
                 let token = pairingToken ?? PairingManager.shared.createPinToken(pin: pin ?? "")
                 let method = pairingToken != nil ? "qr" : "pin"
@@ -334,6 +335,30 @@ public final class AirPulseSession: ObservableObject, H264DecoderDelegate {
             try? await controlClient.sendFrame(type: MessageType.clipboardText, payload: msg.encode())
         }
     }
+
+    // MARK: - System & Quick Commands (Volume, Web, Media, Power)
+
+    public func sendSystemCommand(_ command: String, param: String = "") {
+        let msg = SystemCommandMessage(command: command, param: param)
+        Task {
+            try? await controlClient.sendFrame(type: MessageType.systemCommand, payload: msg.encode())
+        }
+    }
+
+    public func volumeUp() { sendSystemCommand("volume_up") }
+    public func volumeDown() { sendSystemCommand("volume_down") }
+    public func volumeMute() { sendSystemCommand("volume_mute") }
+
+    public func mediaPlayPause() { sendSystemCommand("media_play_pause") }
+    public func mediaNext() { sendSystemCommand("media_next") }
+    public func mediaPrev() { sendSystemCommand("media_prev") }
+
+    public func openUrlOnPc(_ url: String) { sendSystemCommand("open_url", param: url) }
+    public func lockPc() { sendSystemCommand("lock") }
+    public func sleepPc() { sendSystemCommand("sleep") }
+    public func shutdownPc() { sendSystemCommand("shutdown") }
+    public func restartPc() { sendSystemCommand("restart") }
+    public func pasteTextToPc(_ text: String) { sendSystemCommand("paste_text", param: text) }
 
     // MARK: - H264DecoderDelegate
 

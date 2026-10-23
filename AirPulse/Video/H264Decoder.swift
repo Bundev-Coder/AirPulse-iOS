@@ -99,7 +99,7 @@ public final class H264Decoder {
                 CMBlockBufferReplaceDataBytes(
                     with: base,
                     blockBuffer: buffer,
-                    writeOffset: 0,
+                    offsetIntoDestination: 0,
                     dataLength: length
                 )
             }

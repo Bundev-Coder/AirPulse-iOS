@@ -18,7 +18,7 @@ public enum TransferStatus: String, Codable {
     case cancelled = "Đã hủy"
 }
 
-public struct TransferItem: Identifiable, ObservableObject {
+public final class TransferItem: Identifiable, ObservableObject {
     public let id: String // File UUID
     public let fileName: String
     public let fileSize: Int64
@@ -29,6 +29,20 @@ public struct TransferItem: Identifiable, ObservableObject {
     @Published public var status: TransferStatus = .pending
     @Published public var errorMessage: String?
     public var localUrl: URL?
+
+    public init(
+        id: String,
+        fileName: String,
+        fileSize: Int64,
+        direction: TransferDirection,
+        localUrl: URL? = nil
+    ) {
+        self.id = id
+        self.fileName = fileName
+        self.fileSize = fileSize
+        self.direction = direction
+        self.localUrl = localUrl
+    }
 }
 
 public final class FileTransferManager: ObservableObject {

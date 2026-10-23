@@ -19,6 +19,14 @@ targets:
         CFBundleShortVersionString: "1.0.0"
         CFBundleVersion: "1"
         UILaunchScreen: {}
+        NSCameraUsageDescription: "AirPulse cần Camera để quét mã QR kết nối máy tính PC."
+        NSLocalNetworkUsageDescription: "AirPulse cần kết nối mạng nội bộ Wi-Fi để điều khiển máy tính và truyền file."
+        NSPhotoLibraryUsageDescription: "AirPulse cần truy cập thư viện ảnh để gửi hình ảnh sang máy tính không nén chất lượng."
+        NSPhotoLibraryAddUsageDescription: "AirPulse cần lưu ảnh và video nhận từ máy tính vào Album ảnh."
+        NSBonjourServices:
+          - "_airpulse._tcp"
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.airpulse.beam.AirPulse
@@ -28,7 +36,7 @@ targets:
         CODE_SIGN_IDENTITY: ""
         ENABLE_BITCODE: "NO"
         SWIFT_VERSION: "5.9"
-        GENERATE_INFOPLIST_FILE: "NO"
+        GENERATE_INFOPLIST_FILE: "YES"
         INFOPLIST_FILE: AirPulse/Info.plist
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

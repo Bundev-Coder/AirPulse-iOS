@@ -52,6 +52,12 @@ jobs:
         run: |
           APP_PATH=$(find "${{ runner.temp }}/AirPulse.xcarchive/Products/Applications" -name "*.app" -maxdepth 1 | head -n 1)
           echo "Found app bundle at: $APP_PATH"
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'AirPulse cần Camera để quét mã QR kết nối máy tính.'" "$APP_PATH/Info.plist" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription 'AirPulse cần Camera để quét mã QR kết nối máy tính.'" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :NSLocalNetworkUsageDescription string 'AirPulse kết nối mạng nội bộ Wi-Fi để truyền file siêu tốc và điều khiển chuột máy tính.'" "$APP_PATH/Info.plist" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSLocalNetworkUsageDescription 'AirPulse kết nối mạng nội bộ Wi-Fi để truyền file siêu tốc và điều khiển chuột máy tính.'" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'AirPulse cần truy cập thư viện ảnh để gửi hình ảnh sang máy tính không nén chất lượng.'" "$APP_PATH/Info.plist" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription 'AirPulse cần truy cập thư viện ảnh để gửi hình ảnh sang máy tính không nén chất lượng.'" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryAddUsageDescription string 'AirPulse cần lưu ảnh và video nhận từ máy tính vào Album ảnh.'" "$APP_PATH/Info.plist" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryAddUsageDescription 'AirPulse cần lưu ảnh và video nhận từ máy tính vào Album ảnh.'" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :NSBonjourServices array" "$APP_PATH/Info.plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSBonjourServices:0 string '_airpulse._tcp'" "$APP_PATH/Info.plist" 2>/dev/null || true
           codesign -s - --force --deep "$APP_PATH"
 
       - name: Package IPA

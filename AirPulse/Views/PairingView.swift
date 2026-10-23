@@ -15,7 +15,8 @@ public struct PairingView: View {
 
     public init(session: AirPulseSession, initialIp: String = "") {
         self.session = session
-        self._targetHostIp = State(initialValue: initialIp)
+        let defaultIp = !initialIp.isEmpty ? initialIp : (MdnsDiscovery.shared.discoveredHosts.first?.ip ?? "")
+        self._targetHostIp = State(initialValue: defaultIp)
     }
 
     public var body: some View {
@@ -120,6 +121,27 @@ public struct PairingView: View {
                                     .background(Color.white.opacity(0.07))
                                     .cornerRadius(10)
                                     .foregroundColor(.white)
+
+                                if !MdnsDiscovery.shared.discoveredHosts.isEmpty {
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 8) {
+                                            ForEach(MdnsDiscovery.shared.discoveredHosts) { disc in
+                                                Button(action: { targetHostIp = disc.ip }) {
+                                                    HStack(spacing: 4) {
+                                                        Image(systemName: "desktopcomputer")
+                                                        Text("\(disc.name) (\(disc.ip))")
+                                                    }
+                                                    .font(.system(size: 12, weight: .medium))
+                                                    .foregroundColor(.cyan)
+                                                    .padding(.horizontal, 10)
+                                                    .padding(.vertical, 5)
+                                                    .background(Color.cyan.opacity(0.15))
+                                                    .cornerRadius(6)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                             .padding(.horizontal, 28)
 

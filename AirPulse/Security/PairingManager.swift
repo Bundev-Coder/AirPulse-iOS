@@ -40,14 +40,26 @@ public final class PairingManager {
             }
         }
 
+        var tokenData: Data? = nil
+        if let rawToken = tokenHex {
+            var base64 = rawToken.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+            while base64.count % 4 != 0 { base64.append("=") }
+            if let d = Data(base64Encoded: base64) {
+                tokenData = d
+            } else if let d = Data(hexString: rawToken) {
+                tokenData = d
+            } else {
+                tokenData = rawToken.data(using: .utf8)
+            }
+        }
+
         guard let targetIp = ip, !targetIp.isEmpty,
-              let hexToken = tokenHex,
-              let tokenData = Data(hexString: hexToken),
+              let validToken = tokenData,
               let certFp = fp, !certFp.isEmpty else {
             return nil
         }
 
-        return QRPairingPayload(hostIp: targetIp, port: port, tokenData: tokenData, fingerprint: certFp)
+        return QRPairingPayload(hostIp: targetIp, port: port, tokenData: validToken, fingerprint: certFp)
     }
 
     /// Generates token bytes for PIN-based pairing: SHA256(pinUtf8)
